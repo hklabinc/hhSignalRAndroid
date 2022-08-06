@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        // SignalR 종료.
+        // SignalR 종료
         hubConnection.stop();
     }
 }
