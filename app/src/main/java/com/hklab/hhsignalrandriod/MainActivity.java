@@ -18,8 +18,8 @@ import com.microsoft.signalr.HubConnectionState;
 public class MainActivity extends AppCompatActivity {
 
     TextView textView;
-    EditText editTextName, editTextMessage;
-    Button button;
+    EditText editTextAddr, editTextName, editTextMessage;
+    Button buttonConn, buttonSend;
     HubConnection hubConnection;
 
     @Override
@@ -27,43 +27,50 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        editTextAddr = findViewById(R.id.editTextAddr);
         editTextName = findViewById(R.id.editTextName);
         editTextMessage = findViewById(R.id.editTextMessage);
-        button = findViewById(R.id.button);
+        buttonConn = findViewById(R.id.buttonConn);
+        buttonSend = findViewById(R.id.buttonSend);
         textView = findViewById(R.id.textView);
 
-        final Handler handler = new Handler();  // Handler
+        //final Handler handler = new Handler();  // Handler
 
-        // 연결 설정
-        // (Notice: Android 9부터는 http 연결을 위해 Manifest에 android:usesCleartextTraffic="true" 추가 해야!!)
-        String input = "http://hklab.hknu.ac.kr/chathub";
-        hubConnection = HubConnectionBuilder.create(input).build();
+        buttonConn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 연결 설정
+                // (Notice: Android 9부터는 http 연결을 위해 Manifest에 android:usesCleartextTraffic="true" 추가 해야!!)
+                String servAddr = "http://" + editTextAddr.getText().toString() + "/chathub";
+                hubConnection = HubConnectionBuilder.create(servAddr).build();
 
-        // 수신 함수 등록
-        hubConnection.on("ReceiveMessage", (user, message) -> {
-            //textView.append(user + ": " + message + "\n");
+                // 수신 함수 등록
+                hubConnection.on("ReceiveMessage", (user, message) -> {
+                    textView.append(user + ": " + message + "\n");  // Main thread 이므로
 
-            // Handler 사용 (UI 접근 위해)
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    textView.append(user + " : " + message + "\n");
+                    // Handler 사용 (UI 접근 위해)
+                    /*handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            textView.append(user + " : " + message + "\n");
+                        }
+                    });*/
+                }, String.class, String.class);		// 수신 메시지 개수에 따라 타입을 정의
+
+                // 연결
+                try {
+                  hubConnection.start().blockingAwait();
+                  Log.d("[HHCHOI]", "SignalR Connected!");
+                  Toast.makeText(getApplicationContext(), "연결 성공", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                  Log.d("[HHCHOI]", "SignalR Connection Error!: " + e.getMessage());
+                  Toast.makeText(getApplicationContext(), "연결 실패", Toast.LENGTH_SHORT).show();
                 }
-            });
-        }, String.class, String.class);		// 수신 메시지 개수에 따라 타입을 정의
-
-        // 연결
-        try {
-            hubConnection.start().blockingAwait();
-            Log.d("[HHCHOI]", "SignalR Connected!");
-            Toast.makeText(getApplicationContext(), "연결 성공", Toast.LENGTH_SHORT).show();
-        } catch (Exception e) {
-            Log.d("[HHCHOI]", "SignalR Connection Error!: " + e.getMessage());
-            Toast.makeText(getApplicationContext(), "연결 실패", Toast.LENGTH_SHORT).show();
-        }
+            }
+        });
 
         // 메시지 전송
-        button.setOnClickListener(new View.OnClickListener() {
+        buttonSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
@@ -74,15 +81,15 @@ public class MainActivity extends AppCompatActivity {
                     String message = editTextMessage.getText().toString();
                     editTextMessage.setText("");
 
-                    //hubConnection.send("SendMessage", name, message);
+                    hubConnection.send("SendMessage", name, message);
 
                     // Thread 사용
-                    new Thread(new Runnable() {
+                    /*new Thread(new Runnable() {
                         @Override
                         public void run() {
                             hubConnection.send("SendMessage", name, message);
                         }
-                    }).start();
+                    }).start();*/
 
                 } else {
                     Toast.makeText(getApplicationContext(), "연결 필요", Toast.LENGTH_SHORT).show();
